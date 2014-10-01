@@ -8,6 +8,7 @@ my $SOUPER_BIN = "$SOUPER_BASE/build/souper";
 my $CLANG_BIN = "$SOUPER_BASE/third_party/llvm/Debug/bin/clang";
 my $LLVM_OPT = "$SOUPER_BASE/third_party/llvm/Debug/bin/opt";
 my $LLVM_DIS = "$SOUPER_BASE/third_party/llvm/Debug/bin/llvm-dis";
+my $LLVM_AS = "$SOUPER_BASE/third_party/llvm/Debug/bin/llvm-as";
 my $SOLVER_BASE = "/home/yangchen/tool_installations";
 my $APPLY_MODE = "none";
 my $SAVE_SOLVER_TEMP = "-keep-solver-inputs -dump-klee-exprs";
@@ -65,7 +66,6 @@ sub go($$) {
   }
   else {
     my $bc_file = $cfile;
-    my $do_generate_bc = 1;
     if ($cfile =~ m/\.c$/) {
       $bc_file =~ s/\.c$/\.bc/;
     }
@@ -83,14 +83,15 @@ sub go($$) {
     }
     elsif ($cfile =~ m/\.bc$/) {
       # we are start from a bc file
-      $do_generate_bc = 0;
+      abort_if_fail("$CLANG_BIN $CLANG_OPT_LEVEL -emit-llvm -c -o $bc_file $cfile");
+      abort_if_fail("$LLVM_DIS $bc_file");
+    }
+    elsif ($cfile =~ m/\.ll$/) {
+      $bc_file =~ s/\.ll$/\.bc/;
+      abort_if_fail("$LLVM_AS -o $bc_file $cfile");
     }
     else {
       die "Invalid file: $cfile";
-    }
-    if ($do_generate_bc) {
-      abort_if_fail("$CLANG_BIN $CLANG_OPT_LEVEL -emit-llvm -c -o $bc_file $cfile");
-      abort_if_fail("$LLVM_DIS $bc_file");
     }
     abort_if_fail("$prefix$SOUPER_BIN $SAVE_SOLVER_TEMP -$solver-path=$solver_bin $bc_file");
 
