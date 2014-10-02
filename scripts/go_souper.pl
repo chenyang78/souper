@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-my $SOUPER_BASE = "/home/yangchen/Programs/souper";
+my $SOUPER_BASE = "/home/yangchen/Programs/souper_fork/souper";
 my $SOUPER_BIN = "$SOUPER_BASE/build/souper";
 my $CLANG_BIN = "$SOUPER_BASE/third_party/llvm/Debug/bin/clang";
 my $LLVM_OPT = "$SOUPER_BASE/third_party/llvm/Debug/bin/opt";
@@ -66,6 +66,7 @@ sub go($$) {
   }
   else {
     my $bc_file = $cfile;
+    my $generate_bc = 1;
     if ($cfile =~ m/\.c$/) {
       $bc_file =~ s/\.c$/\.bc/;
     }
@@ -81,17 +82,22 @@ sub go($$) {
     elsif ($cfile =~ m/\.ii$/) {
       $bc_file =~ s/\.ii$/\.bc/;
     }
-    elsif ($cfile =~ m/\.bc$/) {
-      # we are start from a bc file
-      abort_if_fail("$CLANG_BIN $CLANG_OPT_LEVEL -emit-llvm -c -o $bc_file $cfile");
-      abort_if_fail("$LLVM_DIS $bc_file");
-    }
     elsif ($cfile =~ m/\.ll$/) {
       $bc_file =~ s/\.ll$/\.bc/;
       abort_if_fail("$LLVM_AS -o $bc_file $cfile");
+      $generate_bc = 0;
+    }
+    elsif ($cfile =~ m/\.bc$/) {
+      # we are start from a bc file
+      abort_if_fail("$LLVM_DIS $bc_file");
+      $generate_bc = 0;
     }
     else {
       die "Invalid file: $cfile";
+    }
+    if ($generate_bc) {
+      abort_if_fail("$CLANG_BIN $CLANG_OPT_LEVEL -emit-llvm -c -o $bc_file $cfile");
+      abort_if_fail("$LLVM_DIS $bc_file");
     }
     abort_if_fail("$prefix$SOUPER_BIN $SAVE_SOLVER_TEMP -$solver-path=$solver_bin $bc_file");
 
