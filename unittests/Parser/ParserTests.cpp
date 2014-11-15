@@ -135,7 +135,7 @@ TEST(ParserTest, Errors) {
         "<input>:2:1: operands have different widths" },
       { "%0 = block 2\n%1:i32 = phi %0, 1:i64, 2:i64\n",
         "<input>:2:1: inst must have width of 64, has width 32" },
-      { "%0 = block 1\n%1:i32 = var\nblockpc %0 1 %1 1"
+      { "%0 = block 2\n%1:i32 = var\nblockpc %0 1 %1 1"
         "\n%2:i32 = phi %0, %1, %1",
         "<input>:4:1: number of operands inconsistent "
         "between phi and blockpcs" },
