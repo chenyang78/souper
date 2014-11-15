@@ -168,7 +168,7 @@ public:
           errs() << "\n; For LLVM instruction:\n;";
           I->print(errs());
           errs() << "\n; Generating replacement:\n";
-          PrintReplacementLHS(errs(), R.PCs, R.Mapping.LHS);
+          PrintReplacementLHS(errs(), R.BPCs, R.PCs, R.Mapping.LHS);
         }
         AddToCandidateMap(CandMap, R);
       }
@@ -187,11 +187,13 @@ public:
         Instruction *I = Cand.Origin.getInstruction();
         I->getDebugLoc().print(I->getContext(), Loc);
         std::string HField = "sprofile " + Loc.str();
-        KV->hIncrBy(GetReplacementLHSString(Cand.PCs, Cand.Mapping.LHS), HField,
-                    1);
+        KV->hIncrBy(GetReplacementLHSString(Cand.BPCs, Cand.PCs,
+                                            Cand.Mapping.LHS),
+                    HField, 1);
       }
       if (std::error_code EC =
-          S->infer(Cand.PCs, Cand.Mapping.LHS, Cand.Mapping.RHS, IC)) {
+          S->infer(Cand.BPCs, Cand.PCs, Cand.Mapping.LHS, 
+                   Cand.Mapping.RHS, IC)) {
         if (EC == std::errc::timed_out)
           continue;
         if (IgnoreSolverErrors) {
@@ -215,7 +217,7 @@ public:
         errs() << "\"\n; with \"";
         CI->print(errs());
         errs() << "\" in:\n";
-        PrintReplacement(errs(), Cand.PCs, Cand.Mapping);
+        PrintReplacement(errs(), Cand.BPCs, Cand.PCs, Cand.Mapping);
       }
       if (ReplaceCount >= FirstReplace && ReplaceCount <= LastReplace) {
         BasicBlock::iterator BI = I;
@@ -225,7 +227,8 @@ public:
           llvm::raw_string_ostream Loc(Str);
           I->getDebugLoc().print(I->getContext(), Loc);
           dynamicProfile (F.getContext(), F.getParent(),
-                          GetReplacementLHSString(Cand.PCs, Cand.Mapping.LHS),
+                          GetReplacementLHSString(Cand.BPCs, Cand.PCs, 
+                                                  Cand.Mapping.LHS),
                           Loc.str(), BI);
         }
         changed = true;

@@ -253,6 +253,8 @@ struct Parser {
   std::vector<InstMapping> PCs;
   std::map<StringRef, Inst *> InstMap;
   std::map<StringRef, Block *> BlockMap;
+  std::map<StringRef, std::vector<InstMapping> > BlockPCMap;
+  std::vector<StringRef> OrderedBlocks;
   Inst *LHS = 0;
 
   std::string makeErrStr(const std::string &ErrStr) {
@@ -274,11 +276,13 @@ struct Parser {
     }
   }
 
+  void clearAll();
+  BlockPCs getBlockPCs();
   Inst *parseInst(std::string &ErrStr);
   InstMapping parseInstMapping(std::string &ErrStr);
 
-  bool typeCheckPhi(unsigned Width, Block *B, std::vector<Inst *> &Ops,
-                    std::string &ErrStr);
+  bool typeCheckPhi(unsigned Width, StringRef BlockName, Block *B, 
+                    std::vector<Inst *> &Ops, std::string &ErrStr);
   bool typeCheckInst(Inst::Kind IK, unsigned &Width, std::vector<Inst *> &Ops,
                      std::string &ErrStr);
   bool typeCheckOpsMatchingWidths(llvm::MutableArrayRef<Inst *> Ops,
@@ -356,11 +360,16 @@ bool Parser::typeCheckOpsMatchingWidths(llvm::MutableArrayRef<Inst *> Ops,
   return true;
 }
 
-bool Parser::typeCheckPhi(unsigned Width, Block *B,
+bool Parser::typeCheckPhi(unsigned Width, StringRef BlockName, Block *B,
                           std::vector<Inst *> &Ops, std::string &ErrStr) {
   if (B->Preds != Ops.size()) {
     ErrStr = "phi has " + utostr(Ops.size()) +
       " operand(s) but preceding block has " + utostr(B->Preds);
+    return false;
+  }
+  auto BlockPCIt = BlockPCMap.find(BlockName);
+  if (BlockPCIt != BlockPCMap.end() && BlockPCIt->second.size() != Ops.size()) {
+    ErrStr = "number of operands inconsistent between phi and blockpcs";
     return false;
   }
 
@@ -549,6 +558,29 @@ InstMapping Parser::parseInstMapping(std::string &ErrStr) {
   return InstMapping(SrcRep[0], SrcRep[1]);
 }
 
+BlockPCs Parser::getBlockPCs() {
+  BlockPCs BPCs;
+  for (auto Name : OrderedBlocks) {
+    auto BlockIt = BlockMap.find(Name);
+    assert(BlockIt != BlockMap.end() && "Cannot find the corresponding block!");
+    assert(BlockIt->second && "Block was not created?");
+    auto BlockPCIt = BlockPCMap.find(Name);
+    assert(BlockPCIt != BlockPCMap.end() && "Cannot find blockpc(s)!");
+    assert(BlockPCIt->second.size() && "Empty blockpc(s)?");
+    BPCs.emplace_back(BlockIt->second, std::move(BlockPCIt->second));
+  }
+  return BPCs;
+}
+
+void Parser::clearAll() {
+  PCs.clear();
+  InstMap.clear();
+  BlockMap.clear();
+  BlockPCMap.clear();
+  OrderedBlocks.clear();
+  LHS = 0;
+}
+
 bool Parser::parseLine(std::string &ErrStr) {
   switch (CurTok.K) {
     case Token::Ident:
@@ -565,11 +597,9 @@ bool Parser::parseLine(std::string &ErrStr) {
         InstMapping Cand = parseInstMapping(ErrStr);
         if (!ErrStr.empty()) return false;
 
-        Reps.push_back(ParsedReplacement{Cand, std::move(PCs)});
-        PCs.clear();
-        InstMap.clear();
-        BlockMap.clear();
-        LHS = 0;
+        Reps.push_back(ParsedReplacement{Cand, std::move(PCs),
+                                         getBlockPCs()});
+        clearAll();
 
         return true;
       } else if (CurTok.str() == "infer") {
@@ -587,11 +617,9 @@ bool Parser::parseLine(std::string &ErrStr) {
           return false;
 
         if (RK == ReplacementKind::ParseLHS) {
-          Reps.push_back(ParsedReplacement{InstMapping(LHS, 0), std::move(PCs)});
-          PCs.clear();
-          InstMap.clear();
-          BlockMap.clear();
-          LHS = 0;
+          Reps.push_back(ParsedReplacement{InstMapping(LHS, 0), 
+                                           std::move(PCs), getBlockPCs()});
+          clearAll();
         }
 
         return true;
@@ -610,11 +638,9 @@ bool Parser::parseLine(std::string &ErrStr) {
           return false;
         InstMapping Cand = InstMapping(LHS, RHS);
 
-        Reps.push_back(ParsedReplacement{Cand, std::move(PCs)});
-        PCs.clear();
-        InstMap.clear();
-        BlockMap.clear();
-        LHS = 0;
+        Reps.push_back(ParsedReplacement{Cand, std::move(PCs), 
+                                         getBlockPCs()});
+        clearAll();
 
         return true;
       } else if (CurTok.str() == "pc") {
@@ -622,6 +648,60 @@ bool Parser::parseLine(std::string &ErrStr) {
         InstMapping PC = parseInstMapping(ErrStr);
         if (!ErrStr.empty()) return false;
 
+        PCs.push_back(PC);
+
+        return true;
+      } else if (CurTok.str() == "blockpc") {
+        if (!consumeToken(ErrStr)) return false;
+        if (CurTok.K != Token::ValName) {
+          ErrStr = makeErrStr("expected block var");
+          return false;
+        }
+        StringRef InstName = CurTok.Name;
+        unsigned InstWidth = CurTok.Width;
+        if (InstWidth != 0) {
+          ErrStr = makeErrStr("blocks may not have a width");
+          return false;
+        }
+        if (InstMap.find(InstName) != InstMap.end()) {
+          ErrStr = makeErrStr(std::string("%") + InstName.str() +
+                            " is declared as an inst");
+          return false;
+        }
+        std::map<StringRef, Block *>::iterator BlockIt = 
+          BlockMap.find(InstName);
+        if (BlockIt == BlockMap.end()) {
+          ErrStr = makeErrStr(std::string("block %") + InstName.str() +
+                              " is undeclared");
+          return false;
+        }
+        std::map<StringRef, std::vector<InstMapping> >::iterator BlockPCIt =
+          BlockPCMap.find(InstName);
+        // A new set of blockpc(s)
+        if (BlockPCIt == BlockPCMap.end()) {
+          OrderedBlocks.push_back(InstName);
+        }
+        else if (OrderedBlocks.size() && OrderedBlocks.back() != InstName) {
+          // Let's make sure all blockpc(s) of a block are consecutive.
+          ErrStr = makeErrStr(std::string("blockpc(s) %") + InstName.str() +
+                              " are not consecutive");
+          return false;
+        }
+        auto &PCs = BlockPCMap[InstName];
+
+        if (!consumeToken(ErrStr)) return false;
+        // Block numbers starts from 1 to N, where N is the number of
+        // incoming edges.
+        int ExpectedBlockNum = PCs.size() + 1;
+        if (CurTok.Val != ExpectedBlockNum) {
+          ErrStr = makeErrStr(std::string("expected block number: ") +
+                              std::to_string(ExpectedBlockNum));
+          return false;
+        }
+        if (!consumeToken(ErrStr)) return false;
+
+        InstMapping PC = parseInstMapping(ErrStr);
+        if (!ErrStr.empty()) return false;
         PCs.push_back(PC);
 
         return true;
@@ -800,7 +880,8 @@ bool Parser::parseLine(std::string &ErrStr) {
       Inst *I;
       if (IK == Inst::Phi) {
         assert(PhiBlockIt->second);
-        if (!typeCheckPhi(InstWidth, PhiBlockIt->second, Ops, ErrStr)) {
+        if (!typeCheckPhi(InstWidth, PhiBlockIt->first,
+                          PhiBlockIt->second, Ops, ErrStr)) {
           ErrStr = makeErrStr(TP, ErrStr);
           return false;
         }
@@ -818,7 +899,8 @@ bool Parser::parseLine(std::string &ErrStr) {
     }
 
     default:
-      ErrStr = makeErrStr("expected inst, block, cand, infer, result, or pc");
+      ErrStr = 
+        makeErrStr("expected inst, block, cand, infer, result, pc, or blockpc");
       return false;
   }
 }
@@ -901,7 +983,8 @@ std::vector<ParsedReplacement> Parser::parseReplacements(std::string &ErrStr) {
       return Reps;
   }
 
-  if (!PCs.empty() || !InstMap.empty() || !BlockMap.empty()) {
+  if (!PCs.empty() || !InstMap.empty() || !BlockMap.empty() ||
+      !BlockPCMap.empty() || !OrderedBlocks.empty()) {
     ErrStr = makeErrStr("incomplete replacement");
     return Reps;
   }

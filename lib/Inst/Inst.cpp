@@ -158,6 +158,29 @@ unsigned PrintContext::printBlock(Block *B) {
   return BlockNum;
 }
 
+void PrintContext::printPCs(const std::vector<InstMapping> &PCs) {
+  for (const auto &PC : PCs) {
+    std::string SRef = printInst(PC.LHS);
+    std::string RRef = printInst(PC.RHS);
+    Out << "pc " << SRef << " " << RRef << '\n';
+  }
+}
+
+void PrintContext::printBlockPCs(const BlockPCs &BPCs) {
+  for (auto &BPC : BPCs) {
+    assert(BPC.B && "NULL Block pointer!");
+    unsigned BlockNum = printBlock(BPC.B);
+    assert(BPC.PCs.size() > 0 && "Empty Block PCs!");
+    for (unsigned I = 0; I < BPC.PCs.size(); ++I) {
+      auto PC = BPC.PCs[I];
+      std::string SRef = printInst(PC.LHS);
+      std::string RRef = printInst(PC.RHS);
+      Out << "blockpc %" << BlockNum << " " << I+1 << " "; 
+      Out << SRef << " " << RRef << '\n';
+    }
+  }
+}
+
 const char *Inst::getKindName(Kind K) {
   switch (K) {
   case Const:
@@ -441,52 +464,48 @@ bool Inst::isCommutative(Inst::Kind K) {
 }
 
 void souper::PrintReplacement(llvm::raw_ostream &Out,
+                              const BlockPCs &BPCs,
                               const std::vector<InstMapping> &PCs,
                               InstMapping Mapping) {
   assert(Mapping.LHS);
   assert(Mapping.RHS);
 
   PrintContext Printer(Out);
-  for (const auto &PC : PCs) {
-    std::string SRef = Printer.printInst(PC.LHS);
-    std::string RRef = Printer.printInst(PC.RHS);
-    Out << "pc " << SRef << " " << RRef << '\n';
-  }
-
+  Printer.printPCs(PCs);
+  Printer.printBlockPCs(BPCs);
   std::string SRef = Printer.printInst(Mapping.LHS);
   std::string RRef = Printer.printInst(Mapping.RHS);
   Out << "cand " << SRef << " " << RRef << '\n';
 }
 
-std::string souper::GetReplacementString(const std::vector<InstMapping> &PCs,
+std::string souper::GetReplacementString(const BlockPCs &BPCs,
+                                         const std::vector<InstMapping> &PCs,
                                          InstMapping Mapping) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
-  PrintReplacement(SS, PCs, Mapping);
+  PrintReplacement(SS, BPCs, PCs, Mapping);
   return SS.str();
 }
 
 void souper::PrintReplacementLHS(llvm::raw_ostream &Out,
+                                 const BlockPCs &BPCs,
                                  const std::vector<InstMapping> &PCs,
                                  Inst *LHS) {
   assert(LHS);
 
   PrintContext Printer(Out);
-  for (const auto &PC : PCs) {
-    std::string SRef = Printer.printInst(PC.LHS);
-    std::string RRef = Printer.printInst(PC.RHS);
-    Out << "pc " << SRef << " " << RRef << '\n';
-  }
-
+  Printer.printPCs(PCs);
+  Printer.printBlockPCs(BPCs);
   std::string SRef = Printer.printInst(LHS);
   Out << "infer " << SRef << '\n';
 }
 
-std::string souper::GetReplacementLHSString(const std::vector<InstMapping> &PCs,
+std::string souper::GetReplacementLHSString(const BlockPCs &BPCs,
+                                            const std::vector<InstMapping> &PCs,
                                             Inst *LHS) {
   std::string Str;
   llvm::raw_string_ostream SS(Str);
-  PrintReplacementLHS(SS, PCs, LHS);
+  PrintReplacementLHS(SS, BPCs, PCs, LHS);
   return SS.str();
 }
 

@@ -52,26 +52,27 @@ int SolveInst(const MemoryBufferRef &MB, Solver *S) {
   }
 
   if (InferRHS) {
-    if (std::error_code EC = S->infer(Rep.PCs, Rep.Mapping.LHS, Rep.Mapping.RHS,
-                                      IC)) {
+    if (std::error_code EC = S->infer(Rep.BPCs, Rep.PCs, Rep.Mapping.LHS,
+                                      Rep.Mapping.RHS, IC)) {
       llvm::errs() << EC.message() << '\n';
       return 1;
     }
     if (Rep.Mapping.RHS) {
       llvm::outs() << "; RHS inferred successfully\n";
       if (PrintRepl)
-        PrintReplacement(llvm::outs(), Rep.PCs, Rep.Mapping);
+        PrintReplacement(llvm::outs(), Rep.BPCs, Rep.PCs, Rep.Mapping);
       else
         PrintReplacementRHS(llvm::outs(), Rep.Mapping.RHS->Val);
     } else {
       llvm::outs() << "; Failed to infer RHS\n";
       if (PrintRepl)
-        PrintReplacementLHS(llvm::outs(), Rep.PCs, Rep.Mapping.LHS);
+        PrintReplacementLHS(llvm::outs(), Rep.BPCs, Rep.PCs, Rep.Mapping.LHS);
     }
   } else {
     bool Valid;
     std::vector<std::pair<Inst *, APInt>> Models;
-    if (std::error_code EC = S->isValid(Rep.PCs, Rep.Mapping, Valid, &Models)) {
+    if (std::error_code EC = S->isValid(Rep.BPCs, Rep.PCs, 
+                                        Rep.Mapping, Valid, &Models)) {
       llvm::errs() << EC.message() << '\n';
       return 1;
     }
@@ -79,7 +80,7 @@ int SolveInst(const MemoryBufferRef &MB, Solver *S) {
     if (Valid) {
       llvm::outs() << "; LGTM\n";
       if (PrintRepl)
-        PrintReplacement(llvm::outs(), Rep.PCs, Rep.Mapping);
+        PrintReplacement(llvm::outs(), Rep.BPCs, Rep.PCs, Rep.Mapping);
     } else {
       llvm::outs() << "Invalid";
       if (PrintCounterExample && !Models.empty()) {

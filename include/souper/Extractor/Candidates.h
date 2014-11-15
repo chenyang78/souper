@@ -62,18 +62,25 @@ struct CandidateReplacement {
   /// The path conditions relevant to this replacement.
   std::vector<InstMapping> PCs;
 
+  /// The block path conditions relevant to this replacement.
+  /// A BlockPC has the same semantics as a PC, except that the PC only applies
+  /// if the given predecessor of the given block is chosen.
+  BlockPCs BPCs;
+
   void printFunction(llvm::raw_ostream &Out) const;
   void printLHS(llvm::raw_ostream &Out) const;
   void print(llvm::raw_ostream &Out) const;
 };
 
 void PrintReplacement(llvm::raw_ostream &Out,
+                      const BlockPCs &BPCs,
                       const std::vector<InstMapping> &PCs, InstMapping Mapping);
 
 struct BlockCandidateSet {
   llvm::BasicBlock *Origin;
 
   std::vector<InstMapping> PCs;
+  BlockPCs BPCs;
   std::vector<CandidateReplacement> Replacements;
 };
 
