@@ -448,6 +448,7 @@ InstMapping ExprBuilder::getOnePC(BasicBlock *BB, BasicBlock *Pred) {
 void ExprBuilder::addPathConditions(std::vector<InstMapping> &PCs,
                                     BasicBlock *BB) {
   if (auto Pred = BB->getSinglePredecessor()) {
+    addPathConditions(PCs, Pred);
     emplace_back_dedup(PCs, getOnePC(BB, Pred));
   }
 }
