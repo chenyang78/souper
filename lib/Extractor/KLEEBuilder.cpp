@@ -46,7 +46,7 @@ using namespace souper;
 
 namespace {
 
-typedef std::unordered_map<Inst *, std::vector<ref<Expr> > > PhiMap;
+typedef std::unordered_map<Inst *, std::vector<ref<Expr>>> PhiMap;
 
 struct PhiPath {
   std::map<Block *, unsigned> BlockConstraints;
@@ -57,20 +57,20 @@ struct PhiPath {
 struct BlockPCPhiPath {
   std::map<Block *, unsigned> BlockConstraints;
   std::vector<Inst *> Phis;
-  std::vector<ref<Expr> > PCs;
+  std::vector<ref<Expr>> PCs;
 };
 
 struct ExprBuilder {
-  ExprBuilder(std::vector<std::unique_ptr<Array> > &Arrays,
+  ExprBuilder(std::vector<std::unique_ptr<Array>> &Arrays,
               std::vector<Inst *> &ArrayVars)
       : Arrays(Arrays), ArrayVars(ArrayVars) {}
 
-  std::map<Block *, std::vector<ref<Expr> >> BlockPredMap;
-  std::map<Inst *, ref<Expr> > ExprMap;
-  std::map<Inst *, ref<Expr> > UBExprMap;
+  std::map<Block *, std::vector<ref<Expr>>> BlockPredMap;
+  std::map<Inst *, ref<Expr>> ExprMap;
+  std::map<Inst *, ref<Expr>> UBExprMap;
   std::vector<std::unique_ptr<Array>> &Arrays;
   std::vector<Inst *> &ArrayVars;
-  std::unordered_map<Block *, std::vector<ref<Expr> > > BlockPCMap;
+  std::unordered_map<Block *, std::vector<ref<Expr>>> BlockPCMap;
   std::vector<Inst *> PhiInsts;
   UniqueNameSet ArrayNames;
 
@@ -555,11 +555,11 @@ ref<Expr> ExprBuilder::getInstMapping(const InstMapping &IM) {
   return EqExpr::create(get(IM.LHS), get(IM.RHS));
 }
 
-std::vector<ref<Expr> > ExprBuilder::getBlockPredicates(Inst *I) {
+std::vector<ref<Expr>> ExprBuilder::getBlockPredicates(Inst *I) {
   assert(I->K == Inst::Phi && "not a phi inst");
   if (BlockPredMap.count(I->B))
     return BlockPredMap[I->B];
-  std::vector<ref<Expr> > PredExpr;
+  std::vector<ref<Expr>> PredExpr;
   const std::vector<Inst *> &Ops = I->orderedOps();
   for (unsigned J = 0; J < Ops.size()-1; ++J)
     PredExpr.push_back(makeSizedArrayRead(1, "blockpred", 0));

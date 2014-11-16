@@ -690,9 +690,9 @@ bool Parser::parseLine(std::string &ErrStr) {
         auto &PCs = BlockPCMap[InstName];
 
         if (!consumeToken(ErrStr)) return false;
-        // Block numbers starts from 1 to N, where N is the number of
+        // Block numbers starts from 0 to N-1, where N is the number of
         // incoming edges.
-        int ExpectedBlockNum = PCs.size() + 1;
+        int ExpectedBlockNum = PCs.size();
         if (CurTok.Val != ExpectedBlockNum) {
           ErrStr = makeErrStr(std::string("expected block number: ") +
                               std::to_string(ExpectedBlockNum));

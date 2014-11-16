@@ -2,18 +2,18 @@
 ; REQUIRES: solver
 
 ; RUN: llvm-as -o %t %s
-; RUN: %souper %solver %t
+; RUN: %souper %solver -check %t
 
 ; Function Attrs: nounwind
 define i32 @fn1() #0 {
 entry:
   %0 = add i32 4, 0
-  %tobool = icmp eq i32 %0, 0
+  %tobool = icmp eq i32 %0, 0, !expected !0
   br i1 %tobool, label %if.end13, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
   %1 = add i32 1, 0
-  %tobool119 = icmp eq i32 1, 0
+  %tobool119 = icmp eq i32 1, 0, !expected !0
   br i1 %tobool119, label %if.end.lr.ph, label %for.end.loopexit
 
 if.end.lr.ph:                                     ; preds = %for.cond.preheader
@@ -30,7 +30,7 @@ if.then7:                                         ; preds = %if.end
   br label %for.end
 
 cleanup:                                          ; preds = %if.end
-  %tobool1 = icmp eq i32 1, 0
+  %tobool1 = icmp eq i32 1, 0, !expected !0
   br i1 %tobool1, label %if.end, label %for.cond.for.end.loopexit_crit_edge
 
 for.cond.for.end.loopexit_crit_edge:              ; preds = %cleanup
@@ -49,3 +49,4 @@ if.end13:                                         ; preds = %for.end, %entry, %i
   ret i32 undef
 }
 
+!0 = metadata !{ i1 0 }

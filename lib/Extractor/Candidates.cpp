@@ -483,25 +483,28 @@ void ExprBuilder::addPathConditions(std::vector<InstMapping> &PCs,
 //     Suppose we are collecting BlockPCs for B4. Either
 //     B2 or B3 can reach B4, we cannot add them into B4's PC.
 //     Instead, we add whatever path conditions dominating B2 and
-//     B3 into B4's BlockPCs. In this simple case, 
-//     BlockPCs(B4) = {[B1->B2]}
+//     B3 into B4's BlockPCs. In this simple case, we will have
+//     blockpc %B4, 0, s1, r1 // B1->B2
 //      
 // Now consider a more complex example:
-//            B1          B8
+//            B1          B2
 //           /  \        /  \
-//               B2    B3
+//               B3    B4
 //                \    /
-//                  B4
-//                 /  \
-//                    B5   B6
+//                  B5        B6
+//                 /  \      /  \
+//                    B7   B8
 //                   /  \  /
-//                       B7
-// After we iterate all basic blocks (in ExtractExprCandidates),
-// we will have something like these:
-//   BlockPCs(B4) = {[B1->B2],[B8->B3]}
-//   BlockPCs(B7) = {[B1->B2],[B8->B3],[B4->B5]}
-//   PCs(B2) = {[B1->B2]}
-//   PCs(B3) = {[B8->B3]}
+//                       B9
+// Suppose we are dealing with an instruction %i in B9. After we iterate all
+// basic blocks (in ExtractExprCandidates), we will have something like these:
+// blockpc %B5, 0, s1, r1 // B1->B3
+// blockpc %B5, 1, s2, r2 // B2->B4
+// ...
+// blockpc %B9, 0, s3, r3 // B5 -> B7
+// blockpc %B9, 1, s4, r4 // B6 -> B8
+// ...
+// cand %i, 1
 void ExprBuilder::addBlockPathConditions(
     BlockPCs &BPCs, 
     std::vector<InstMapping> &CurrentPCs,

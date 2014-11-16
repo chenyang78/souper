@@ -50,22 +50,22 @@ TEST(ParserTest, Errors) {
       { "%0:i1 = block 122\n", "<input>:1:1: blocks may not have a width" },
       { "%0:i1 = phi %0\n", "<input>:1:13: %0 is not a block" },
       { "%0 = block 1\n%1:i1 = phi %0 foo\n", "<input>:2:16: expected ','" },
-      { "%0 = block 1\n%1:i32 = var\nblockpc 1 %1", 
+      { "%0 = block 1\n%1:i32 = var\nblockpc 0 %1", 
         "<input>:3:9: expected block var"},
-      { "%0 = block 1\n%1:i32 = var\nblockpc %0:i32 1 %2 1",
+      { "%0 = block 1\n%1:i32 = var\nblockpc %0:i32 0 %2 1",
         "<input>:3:9: blocks may not have a width" },
       { "%0 = block 1\n%1:i32 = var\nblockpc %0 %1\n%2:i32 = var", 
-        "<input>:3:12: expected block number: 1"},
-      { "%0 = block 1\n%1:i32 = var\nblockpc %0 2 %1 1\n%2:i32 = var", 
-        "<input>:3:12: expected block number: 1"},
-      { "%0 = block 1\n%1:i32 = var\nblockpc %0 1 %1 1\nblockpc %0 3 %1 1",
-        "<input>:4:12: expected block number: 2" },
-      { "%0 = block 1\n%1:i32 = var\nblockpc %1 1 %1 1",
+        "<input>:3:12: expected block number: 0"},
+      { "%0 = block 1\n%1:i32 = var\nblockpc %0 1 %1 1\n%2:i32 = var", 
+        "<input>:3:12: expected block number: 0"},
+      { "%0 = block 1\n%1:i32 = var\nblockpc %0 0 %1 1\nblockpc %0 2 %1 1",
+        "<input>:4:12: expected block number: 1" },
+      { "%0 = block 1\n%1:i32 = var\nblockpc %1 0 %1 1",
         "<input>:3:9: %1 is declared as an inst" },
-      { "%0 = block 1\n%1:i32 = var\nblockpc %2 1 %1 1",
+      { "%0 = block 1\n%1:i32 = var\nblockpc %2 0 %1 1",
         "<input>:3:9: block %2 is undeclared" },
-      { "%0 = block 1\n%1 = block 2\n%2:i32 = var\nblockpc %0 1 %2 1\n"
-        "blockpc %1 1 %2 1\nblockpc %0 2 %2 1",
+      { "%0 = block 1\n%1 = block 2\n%2:i32 = var\nblockpc %0 0 %2 1\n"
+        "blockpc %1 0 %2 1\nblockpc %0 1 %2 1",
         "<input>:6:9: blockpc(s) %0 are not consecutive"},
       { ",\n", "<input>:1:1: expected inst, block, cand, infer, result, pc, "
         "or blockpc" },
@@ -135,7 +135,7 @@ TEST(ParserTest, Errors) {
         "<input>:2:1: operands have different widths" },
       { "%0 = block 2\n%1:i32 = phi %0, 1:i64, 2:i64\n",
         "<input>:2:1: inst must have width of 64, has width 32" },
-      { "%0 = block 2\n%1:i32 = var\nblockpc %0 1 %1 1"
+      { "%0 = block 2\n%1:i32 = var\nblockpc %0 0 %1 1"
         "\n%2:i32 = phi %0, %1, %1",
         "<input>:4:1: number of operands inconsistent "
         "between phi and blockpcs" },
