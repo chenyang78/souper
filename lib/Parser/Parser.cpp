@@ -253,7 +253,7 @@ struct Parser {
   std::vector<InstMapping> PCs;
   std::map<StringRef, Inst *> InstMap;
   std::map<StringRef, Block *> BlockMap;
-  std::map<StringRef, std::vector<InstMapping> > BlockPCMap;
+  std::map<StringRef, std::vector<InstMapping>> BlockPCMap;
   std::vector<StringRef> OrderedBlocks;
   Inst *LHS = 0;
 
@@ -675,7 +675,7 @@ bool Parser::parseLine(std::string &ErrStr) {
                               " is undeclared");
           return false;
         }
-        std::map<StringRef, std::vector<InstMapping> >::iterator BlockPCIt =
+        std::map<StringRef, std::vector<InstMapping>>::iterator BlockPCIt =
           BlockPCMap.find(InstName);
         // A new set of blockpc(s)
         if (BlockPCIt == BlockPCMap.end()) {
