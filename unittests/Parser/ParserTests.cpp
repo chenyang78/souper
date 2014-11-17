@@ -55,11 +55,9 @@ TEST(ParserTest, Errors) {
       { "%0 = block 1\n%1:i32 = var\nblockpc %0:i32 0 %2 1",
         "<input>:3:9: blocks may not have a width" },
       { "%0 = block 1\n%1:i32 = var\nblockpc %0 %1\n%2:i32 = var", 
-        "<input>:3:12: expected block number: 0"},
-      { "%0 = block 1\n%1:i32 = var\nblockpc %0 1 %1 1\n%2:i32 = var", 
-        "<input>:3:12: expected block number: 0"},
-      { "%0 = block 1\n%1:i32 = var\nblockpc %0 0 %1 1\nblockpc %0 2 %1 1",
-        "<input>:4:12: expected block number: 1" },
+        "<input>:3:12: expected block number"},
+      { "%0 = block 1\n%1:i32 = var\nblockpc %0 1 %1 1\nblockpc %0 0 %1 1",
+        "<input>:4:12: expected block number: greater than or equal to 1" },
       { "%0 = block 1\n%1:i32 = var\nblockpc %1 0 %1 1",
         "<input>:3:9: %1 is declared as an inst" },
       { "%0 = block 1\n%1:i32 = var\nblockpc %2 0 %1 1",
@@ -135,10 +133,10 @@ TEST(ParserTest, Errors) {
         "<input>:2:1: operands have different widths" },
       { "%0 = block 2\n%1:i32 = phi %0, 1:i64, 2:i64\n",
         "<input>:2:1: inst must have width of 64, has width 32" },
-      { "%0 = block 2\n%1:i32 = var\nblockpc %0 0 %1 1"
-        "\n%2:i32 = phi %0, %1, %1",
-        "<input>:4:1: number of operands inconsistent "
-        "between phi and blockpcs" },
+      { "%0 = block 2\n%1:i32 = var\nblockpc %0 0 %1 1\nblockpc %0 1 %1 1\n"
+        "blockpc %0 2 %1 1\n%2:i32 = phi %0, %1, %1",
+        "<input>:6:1: blockpc's predecessor number is larger "
+        "than the number of phi's operands" },
     };
 
   InstContext IC;

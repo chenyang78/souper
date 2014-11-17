@@ -37,7 +37,7 @@ void souper::AddModuleToCandidateMap(InstContext &IC, ExprBuilderContext &EBC,
     FunctionCandidateSet CS = ExtractCandidates(&F, IC, EBC);
     for (auto &B : CS.Blocks) {
       for (auto &R : B->Replacements) {
-#if 1
+#if 0
           Instruction *I = R.Origin.getInstruction();
           errs() << "\n; *****";
           errs() << "\n; For LLVM instruction:\n;";

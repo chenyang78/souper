@@ -684,11 +684,15 @@ bool Parser::parseLine(std::string &ErrStr) {
         }
 
         if (!consumeToken(ErrStr)) return false;
+        if (CurTok.K != Token::UntypedInt) {
+          ErrStr = makeErrStr(std::string("expected block number"));
+          return false;
+        }
         // Block numbers starts from 0 to N-1, where N is the number of
         // incoming edges.
         if (CurTok.Val.ult(CurrIdx)) {
           ErrStr = makeErrStr(std::string("expected block number: ") +
-                              "greater or equal to " +
+                              "greater than or equal to " +
                               std::to_string(CurrIdx));
           return false;
         }
