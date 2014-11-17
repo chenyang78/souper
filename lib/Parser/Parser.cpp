@@ -686,7 +686,7 @@ bool Parser::parseLine(std::string &ErrStr) {
         if (!consumeToken(ErrStr)) return false;
         // Block numbers starts from 0 to N-1, where N is the number of
         // incoming edges.
-        if (CurTok.Val.ule(CurrIdx)) {
+        if (CurTok.Val.ult(CurrIdx)) {
           ErrStr = makeErrStr(std::string("expected block number: ") +
                               "greater or equal to " +
                               std::to_string(CurrIdx));

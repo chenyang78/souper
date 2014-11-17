@@ -775,8 +775,8 @@ void ExprBuilder::getUBPhiPaths(Inst *I, PhiPath *Current,
 }
 
 void ExprBuilder::setBlockPCMap(const BlockPCs &BPCs) {
-  std::unordered_map<unsigned, ref<Expr>> PCMap;
   for (auto BPC : BPCs) {
+    std::unordered_map<unsigned, ref<Expr>> &PCMap = BlockPCMap[BPC.B];
     auto I = PCMap.find(BPC.PredIdx);
     ref<Expr> PE = getInstMapping(BPC.PC);
     if (I == PCMap.end()) {
@@ -785,8 +785,6 @@ void ExprBuilder::setBlockPCMap(const BlockPCs &BPCs) {
     else {
       PCMap[BPC.PredIdx] = AndExpr::create(I->second, PE);
     }
-    // TODO: fixit
-    BlockPCMap[BPC.B] = PCMap;
   }
 }
 

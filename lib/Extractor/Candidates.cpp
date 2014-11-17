@@ -608,9 +608,8 @@ void ExtractExprCandidates(Function &F, const LoopInfo *LI,
       auto PCSets = AddPCSets(BCS->PCs, Vars);
 
       // Only need to start from a basic block with multiple predecessors.
-      if (!BB.getSinglePredecessor()) {
-        BlockInfo &BI = EBC.BlockMap[&BB];
-        assert(BI.B && "Empty Block?");
+      BlockInfo &BI = EBC.BlockMap[&BB];
+      if (!BB.getSinglePredecessor() && BI.B) {
         for (unsigned i = 0; i < BI.Preds.size(); ++i) {
           std::vector<InstMapping> PCs;
           EB.addPathConditions(PCs, BI.Preds[i]);
