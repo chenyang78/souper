@@ -114,11 +114,12 @@ struct InstMapping {
 
 struct BlockPCMapping {
   BlockPCMapping() : B(0) {}
-  BlockPCMapping(Block *B, std::vector<InstMapping> PCs) 
-      : B(B), PCs(PCs) {}
+  BlockPCMapping(Block *B, unsigned I, InstMapping PC)
+      : B(B), PredIdx(I), PC(PC) {}
 
   Block *B;
-  std::vector<InstMapping> PCs;
+  unsigned PredIdx;
+  InstMapping PC;
 };
 
 typedef std::vector<BlockPCMapping> BlockPCs;

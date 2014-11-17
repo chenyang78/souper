@@ -47,6 +47,7 @@ using namespace souper;
 namespace {
 
 typedef std::unordered_map<Inst *, std::vector<ref<Expr>>> PhiMap;
+typedef std::unordered_map<unsigned, ref<Expr>> BlockPCPredMap;
 
 struct PhiPath {
   std::map<Block *, unsigned> BlockConstraints;
@@ -70,7 +71,7 @@ struct ExprBuilder {
   std::map<Inst *, ref<Expr>> UBExprMap;
   std::vector<std::unique_ptr<Array>> &Arrays;
   std::vector<Inst *> &ArrayVars;
-  std::unordered_map<Block *, std::vector<ref<Expr>>> BlockPCMap;
+  std::unordered_map<Block *, BlockPCPredMap> BlockPCMap;
   std::vector<Inst *> PhiInsts;
   UniqueNameSet ArrayNames;
 
@@ -774,10 +775,18 @@ void ExprBuilder::getUBPhiPaths(Inst *I, PhiPath *Current,
 }
 
 void ExprBuilder::setBlockPCMap(const BlockPCs &BPCs) {
-  for (auto I : BPCs) {
-    for (auto PC : I.PCs) {
-      BlockPCMap[I.B].push_back(getInstMapping(PC));
+  std::unordered_map<unsigned, ref<Expr>> PCMap;
+  for (auto BPC : BPCs) {
+    auto I = PCMap.find(BPC.PredIdx);
+    ref<Expr> PE = getInstMapping(BPC.PC);
+    if (I == PCMap.end()) {
+      PCMap[BPC.PredIdx] = PE;
     }
+    else {
+      PCMap[BPC.PredIdx] = AndExpr::create(I->second, PE);
+    }
+    // TODO: fixit
+    BlockPCMap[BPC.B] = PCMap;
   }
 }
 
@@ -851,12 +860,13 @@ void ExprBuilder::getBlockPCPhiPaths(
   // Original path takes the first branch
   Current->BlockConstraints[I->B] = 0;
 
-  auto P = BlockPCMap.find(I->B);
-  if (P != BlockPCMap.end()) {
-    assert(P->second.size() == Ops.size() && 
-           "Phi and BlockPC(s) do not match!");
-    for (unsigned J = 0; J < Ops.size(); ++J)
-      Tmp[J]->PCs.push_back(P->second[J]);
+  auto PCMap = BlockPCMap.find(I->B);
+  if (PCMap != BlockPCMap.end()) {
+    for (unsigned J = 0; J < Ops.size(); ++J) {
+      auto P = PCMap->second.find(J);
+      if (P != PCMap->second.end())
+        Tmp[J]->PCs.push_back(P->second);
+    }
   }
   // Continue recursively
   for (unsigned J = 0; J < Ops.size(); ++J)

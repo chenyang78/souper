@@ -170,14 +170,10 @@ void PrintContext::printBlockPCs(const BlockPCs &BPCs) {
   for (auto &BPC : BPCs) {
     assert(BPC.B && "NULL Block pointer!");
     unsigned BlockNum = printBlock(BPC.B);
-    assert(BPC.PCs.size() > 0 && "Empty Block PCs!");
-    for (unsigned I = 0; I < BPC.PCs.size(); ++I) {
-      auto PC = BPC.PCs[I];
-      std::string SRef = printInst(PC.LHS);
-      std::string RRef = printInst(PC.RHS);
-      Out << "blockpc %" << BlockNum << " " << I+1 << " "; 
-      Out << SRef << " " << RRef << '\n';
-    }
+    std::string SRef = printInst(BPC.PC.LHS);
+    std::string RRef = printInst(BPC.PC.RHS);
+    Out << "blockpc %" << BlockNum << " " << BPC.PredIdx << " "; 
+    Out << SRef << " " << RRef << '\n';
   }
 }
 
