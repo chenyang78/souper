@@ -47,7 +47,7 @@ using namespace souper;
 namespace {
 
 typedef std::unordered_map<Inst *, std::vector<ref<Expr>>> PhiMap;
-typedef std::unordered_map<unsigned, ref<Expr>> BlockPCPredMap;
+typedef std::map<unsigned, ref<Expr>> BlockPCPredMap;
 
 struct PhiPath {
   std::map<Block *, unsigned> BlockConstraints;
@@ -71,7 +71,7 @@ struct ExprBuilder {
   std::map<Inst *, ref<Expr>> UBExprMap;
   std::vector<std::unique_ptr<Array>> &Arrays;
   std::vector<Inst *> &ArrayVars;
-  std::unordered_map<Block *, BlockPCPredMap> BlockPCMap;
+  std::map<Block *, BlockPCPredMap> BlockPCMap;
   std::vector<Inst *> PhiInsts;
   UniqueNameSet ArrayNames;
 
@@ -776,9 +776,10 @@ void ExprBuilder::getUBPhiPaths(Inst *I, PhiPath *Current,
 
 void ExprBuilder::setBlockPCMap(const BlockPCs &BPCs) {
   for (auto BPC : BPCs) {
-    std::unordered_map<unsigned, ref<Expr>> &PCMap = BlockPCMap[BPC.B];
-    auto I = PCMap.find(BPC.PredIdx);
+    assert(BPC.B && "Block is NULL!");
+    BlockPCPredMap &PCMap = BlockPCMap[BPC.B];
     ref<Expr> PE = getInstMapping(BPC.PC);
+    auto I = PCMap.find(BPC.PredIdx);
     if (I == PCMap.end()) {
       PCMap[BPC.PredIdx] = PE;
     }
