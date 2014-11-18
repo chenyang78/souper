@@ -194,7 +194,7 @@ public:
                     HField, 1);
       }
       if (std::error_code EC =
-          S->infer(Cand.BPCs, Cand.PCs, Cand.Mapping.LHS, 
+          S->infer(Cand.BPCs, Cand.PCs, Cand.Mapping.LHS,
                    Cand.Mapping.RHS, IC)) {
         if (EC == std::errc::timed_out)
           continue;
@@ -230,7 +230,7 @@ public:
           I->getDebugLoc().print(I->getContext(), Loc);
           ReplacementContext Context;
           dynamicProfile (F.getContext(), F.getParent(),
-                          GetReplacementLHSString(Cand.BPCs, Cand.PCs, 
+                          GetReplacementLHSString(Cand.BPCs, Cand.PCs,
                                                   Cand.Mapping.LHS, Context),
                           Loc.str(), BI);
         }

@@ -619,7 +619,7 @@ bool Parser::parseLine(std::string &ErrStr) {
           return false;
 
         if (RK == ReplacementKind::ParseLHS) {
-          Reps.push_back(ParsedReplacement{InstMapping(LHS, 0), 
+          Reps.push_back(ParsedReplacement{InstMapping(LHS, 0),
                                            std::move(PCs), std::move(BPCs)});
           nextReplacement();
         }
@@ -640,7 +640,7 @@ bool Parser::parseLine(std::string &ErrStr) {
           return false;
         InstMapping Cand = InstMapping(LHS, RHS);
 
-        Reps.push_back(ParsedReplacement{Cand, std::move(PCs), 
+        Reps.push_back(ParsedReplacement{Cand, std::move(PCs),
                                          std::move(BPCs)});
         nextReplacement();
 
@@ -909,7 +909,7 @@ bool Parser::parseLine(std::string &ErrStr) {
     }
 
     default:
-      ErrStr = 
+      ErrStr =
         makeErrStr("expected inst, block, cand, infer, result, pc, or blockpc");
       return false;
   }
@@ -1000,7 +1000,7 @@ std::vector<ParsedReplacement> Parser::parseReplacements(std::string &ErrStr) {
       return Reps;
   }
 
-  if (!PCs.empty() || !BPCs.empty() || !Context.empty() || 
+  if (!PCs.empty() || !BPCs.empty() || !Context.empty() ||
       !BlockPCIdxMap.empty()) {
     ErrStr = makeErrStr("incomplete replacement");
     return Reps;

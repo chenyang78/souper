@@ -94,7 +94,7 @@ public:
       return EC;
     } else {
       bool IsSat;
-      std::error_code EC = 
+      std::error_code EC =
         SMTSolver->isSatisfiable(BuildQuery(BPCs, PCs, Mapping, 0),
                                  IsSat, 0, 0, Timeout);
       IsValid = !IsSat;
@@ -160,7 +160,7 @@ public:
     const auto &ent = IsValidCache.find(Repl);
     if (ent == IsValidCache.end()) {
       ++MemMissesIsValid;
-      std::error_code EC = UnderlyingSolver->isValid(BPCs, PCs, 
+      std::error_code EC = UnderlyingSolver->isValid(BPCs, PCs,
                                                      Mapping, IsValid, 0);
       IsValidCache.emplace(Repl, std::make_pair(EC, IsValid));
       return EC;

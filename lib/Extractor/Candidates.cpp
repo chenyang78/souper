@@ -33,7 +33,6 @@
 #include <memory>
 #include <sstream>
 #include <unordered_set>
-#include <unordered_map>
 
 using namespace llvm;
 using namespace klee;

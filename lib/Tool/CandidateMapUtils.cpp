@@ -37,14 +37,6 @@ void souper::AddModuleToCandidateMap(InstContext &IC, ExprBuilderContext &EBC,
     FunctionCandidateSet CS = ExtractCandidates(&F, IC, EBC);
     for (auto &B : CS.Blocks) {
       for (auto &R : B->Replacements) {
-#if 0
-          Instruction *I = R.Origin.getInstruction();
-          errs() << "\n; *****";
-          errs() << "\n; For LLVM instruction:\n;";
-          I->print(errs());
-          errs() << "\n; Generating replacement:\n";
-          PrintReplacementLHS(errs(), R.BPCs, R.PCs, R.Mapping.LHS);
-#endif
         AddToCandidateMap(CandMap, R);
       }
     }
@@ -64,7 +56,7 @@ bool SolveCandidateMap(llvm::raw_ostream &OS, CandidateMap &M,
     for (int I=0; I < M.size(); ++I) {
       auto &Cand = M[I];
       ReplacementContext Context;
-      auto S = GetReplacementLHSString(Cand.BPCs, Cand.PCs, 
+      auto S = GetReplacementLHSString(Cand.BPCs, Cand.PCs,
                                        Cand.Mapping.LHS, Context);
       if (Index.find(S) == Index.end()) {
         Index[S] = I;

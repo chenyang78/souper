@@ -69,9 +69,9 @@ struct ExprBuilder {
   std::map<Block *, std::vector<ref<Expr>>> BlockPredMap;
   std::map<Inst *, ref<Expr>> ExprMap;
   std::map<Inst *, ref<Expr>> UBExprMap;
+  std::map<Block *, BlockPCPredMap> BlockPCMap;
   std::vector<std::unique_ptr<Array>> &Arrays;
   std::vector<Inst *> &ArrayVars;
-  std::map<Block *, BlockPCPredMap> BlockPCMap;
   std::vector<Inst *> PhiInsts;
   UniqueNameSet ArrayNames;
 
