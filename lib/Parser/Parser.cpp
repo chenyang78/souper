@@ -261,11 +261,11 @@ struct Parser {
   int Index = 0;
 
   std::vector<InstMapping> PCs;
+  BlockPCs BPCs;
   // When we finish, BlockPCIdxMap[B] is the largest PredIdx for the
   // set of blockpc(s) related to B. The map is used for error- and
   // type-checking.
   std::map<Block *, unsigned> BlockPCIdxMap;
-  BlockPCs BPCs;
   Inst *LHS = 0;
 
   std::string makeErrStr(const std::string &ErrStr) {
