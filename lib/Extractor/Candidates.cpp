@@ -89,7 +89,9 @@ struct ExprBuilder {
   Inst *buildConstant(Constant *c);
   Inst *buildGEP(Inst *Ptr, gep_type_iterator begin, gep_type_iterator end);
   Inst *build(Value *V);
-  void addPathConditions(std::vector<InstMapping> &PCs, BasicBlock *BB);
+  void addPathConditions(BlockPCs &BPCs, std::vector<InstMapping> &PCs,
+                         std::unordered_set<Block *> &VisitedBlocks,
+                         BasicBlock *BB);
   Inst *get(Value *V);
 };
 
@@ -464,10 +466,12 @@ void emplace_back_dedup(std::vector<InstMapping> &PCs, Inst *LHS, Inst *RHS) {
 // blockpc %B9, 1, s4, r4 // B6 -> B8
 // ...
 // cand %i, 1
-void ExprBuilder::addPathConditions(std::vector<InstMapping> &PCs,
+void ExprBuilder::addPathConditions(BlockPCs &BPCs,
+                                    std::vector<InstMapping> &PCs,
+                                    std::unordered_set<Block *> &VisitedBlocks,
                                     BasicBlock *BB) {
   if (auto Pred = BB->getSinglePredecessor()) {
-    addPathConditions(PCs, Pred);
+    addPathConditions(BPCs, PCs, VisitedBlocks, Pred);
     if (auto Branch = dyn_cast<BranchInst>(Pred->getTerminator())) {
       if (Branch->isConditional()) {
         emplace_back_dedup(
@@ -491,13 +495,43 @@ void ExprBuilder::addPathConditions(std::vector<InstMapping> &PCs,
                            IC.getConst(APInt(1, true)));
       }
     }
+  } else {
+    // BB is the entry of the function.
+    if (pred_begin(BB) == pred_end(BB))
+      return;
+
+    BlockInfo &BI = EBC.BlockMap[BB];
+    // We encounter a loop entry point.
+    // FIXME: Basically, we stop at this point, i.e., we don't collect
+    // BlockPC's before loops. Maybe we should consider to resume from BB's
+    // immediate dominator. If we do, generate another pull request for this
+    // purpose.
+    if (!BI.B)
+      return;
+
+    // It's possible that we will re-visit a Block, e.g.,
+    //          \  /
+    //           B1
+    //          /  \
+    //         B2  B3
+    //          \  /
+    //           B4
+    if (VisitedBlocks.count(BI.B))
+      return;
+
+    VisitedBlocks.insert(BI.B);
+    for (unsigned i = 0; i < BI.Preds.size(); ++i) {
+      std::vector<InstMapping> PCs;
+      addPathConditions(BPCs, PCs, VisitedBlocks, BI.Preds[i]);
+      for (auto PC : PCs)
+        BPCs.emplace_back(BlockPCMapping(BI.B, i, PC));
+    }
   }
 }
 
 namespace {
 
 typedef llvm::EquivalenceClasses<Inst *> InstClasses;
-typedef llvm::EquivalenceClasses<Block *> BlockClasses;
 
 // Add the variable set of I as an equivalence class to Vars, and return a
 // reference to the leader of that equivalence class.
@@ -547,11 +581,6 @@ std::vector<Inst *> AddBlockPCSets(const BlockPCs &BPCs, InstClasses &Vars) {
       BPCSets[i] = *BPCLeader;
   }
   return BPCSets;
-}
-
-BlockClasses::member_iterator AddBlockClass(InstClasses::member_iterator Leader,
-                                            BlockClasses Blocks, Block *B) {
-  // TODO
 }
 
 // Return a vector of relevant PCs for a candidate, namely those whose variable
@@ -604,10 +633,6 @@ void ExtractExprCandidates(Function &F, const LoopInfo *LI,
                            FunctionCandidateSet &Result) {
   ExprBuilder EB(Opts, F.getParent(), LI, IC, EBC);
 
-  BlockClasses Blocks;
-  BlockPCs AllBPCs;
-  BlockClasses::member_iterator BlockLeader = Blocks.end();
-
   for (auto &BB : F) {
     std::unique_ptr<BlockCandidateSet> BCS(new BlockCandidateSet);
     for (auto &I : BB) {
@@ -615,28 +640,12 @@ void ExtractExprCandidates(Function &F, const LoopInfo *LI,
         BCS->Replacements.emplace_back(&I, InstMapping(EB.get(&I), 0));
     }
     if (!BCS->Replacements.empty()) {
-      EB.addPathConditions(BCS->PCs, &BB);
+      std::unordered_set<Block *> VisitedBlocks;
+      EB.addPathConditions(BCS->BPCs, BCS->PCs, VisitedBlocks, &BB);
 
-      InstClasses Vars;
+      InstClasses Vars, BPCVars;
       auto PCSets = AddPCSets(BCS->PCs, Vars);
-
-      // Only need to start from a basic block with multiple predecessors.
-      BlockInfo &BI = EBC.BlockMap[&BB];
-      InstClasses BPCVars;
-      std::vector<Inst *> BPCSets;
-      if (!BB.getSinglePredecessor() && BI.B) {
-        for (unsigned i = 0; i < BI.Preds.size(); ++i) {
-          std::vector<InstMapping> PCs;
-          EB.addPathConditions(PCs, BI.Preds[i]);
-          for (auto PC : PCs) {
-            // TODO
-            BCS->BPCs.emplace_back(BlockPCMapping(BI.B, i, PC));
-            AllBPCs.emplace_back(BlockPCMapping(BI.B, i, PC));
-          }
-        }
-        BPCSets = AddBlockPCSets(BCS->BPCs, BPCVars);
-        BlockLeader = AddBlockClass(BlockLeader, Blocks, BI.B);
-      }
+      auto BPCSets = AddBlockPCSets(BCS->BPCs, BPCVars);
 
       for (auto &R : BCS->Replacements) {
         R.PCs = GetRelevantPCs(BCS->PCs, PCSets, Vars, R.Mapping);
