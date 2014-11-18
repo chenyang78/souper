@@ -497,6 +497,7 @@ void ExprBuilder::addPathConditions(std::vector<InstMapping> &PCs,
 namespace {
 
 typedef llvm::EquivalenceClasses<Inst *> InstClasses;
+typedef llvm::EquivalenceClasses<Block *> BlockClasses;
 
 // Add the variable set of I as an equivalence class to Vars, and return a
 // reference to the leader of that equivalence class.
@@ -546,6 +547,11 @@ std::vector<Inst *> AddBlockPCSets(const BlockPCs &BPCs, InstClasses &Vars) {
       BPCSets[i] = *BPCLeader;
   }
   return BPCSets;
+}
+
+BlockClasses::member_iterator AddBlockClass(InstClasses::member_iterator Leader,
+                                            BlockClasses Blocks, Block *B) {
+  // TODO
 }
 
 // Return a vector of relevant PCs for a candidate, namely those whose variable
@@ -598,6 +604,10 @@ void ExtractExprCandidates(Function &F, const LoopInfo *LI,
                            FunctionCandidateSet &Result) {
   ExprBuilder EB(Opts, F.getParent(), LI, IC, EBC);
 
+  BlockClasses Blocks;
+  BlockPCs AllBPCs;
+  BlockClasses::member_iterator BlockLeader = Blocks.end();
+
   for (auto &BB : F) {
     std::unique_ptr<BlockCandidateSet> BCS(new BlockCandidateSet);
     for (auto &I : BB) {
@@ -612,16 +622,21 @@ void ExtractExprCandidates(Function &F, const LoopInfo *LI,
 
       // Only need to start from a basic block with multiple predecessors.
       BlockInfo &BI = EBC.BlockMap[&BB];
+      InstClasses BPCVars;
+      std::vector<Inst *> BPCSets;
       if (!BB.getSinglePredecessor() && BI.B) {
         for (unsigned i = 0; i < BI.Preds.size(); ++i) {
           std::vector<InstMapping> PCs;
           EB.addPathConditions(PCs, BI.Preds[i]);
-          for (auto PC : PCs)
+          for (auto PC : PCs) {
+            // TODO
             BCS->BPCs.emplace_back(BlockPCMapping(BI.B, i, PC));
+            AllBPCs.emplace_back(BlockPCMapping(BI.B, i, PC));
+          }
         }
+        BPCSets = AddBlockPCSets(BCS->BPCs, BPCVars);
+        BlockLeader = AddBlockClass(BlockLeader, Blocks, BI.B);
       }
-      InstClasses BPCVars;
-      auto BPCSets = AddBlockPCSets(BCS->BPCs, BPCVars);
 
       for (auto &R : BCS->Replacements) {
         R.PCs = GetRelevantPCs(BCS->PCs, PCSets, Vars, R.Mapping);
