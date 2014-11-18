@@ -68,13 +68,11 @@ struct CandidateReplacement {
   BlockPCs BPCs;
 
   void printFunction(llvm::raw_ostream &Out) const;
-  void printLHS(llvm::raw_ostream &Out) const;
-  void print(llvm::raw_ostream &Out) const;
+  void printLHS(llvm::raw_ostream &Out, ReplacementContext &Context,
+                bool printNames = false) const;
+  void print(llvm::raw_ostream &Out,
+             bool printNames = false) const;
 };
-
-void PrintReplacement(llvm::raw_ostream &Out,
-                      const BlockPCs &BPCs,
-                      const std::vector<InstMapping> &PCs, InstMapping Mapping);
 
 struct BlockCandidateSet {
   llvm::BasicBlock *Origin;

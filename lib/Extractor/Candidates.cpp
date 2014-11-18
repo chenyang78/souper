@@ -56,12 +56,15 @@ void CandidateReplacement::printFunction(llvm::raw_ostream &Out) const {
   Out << "; Function: " << Origin.getFunctionName() << '\n';
 }
 
-void CandidateReplacement::printLHS(llvm::raw_ostream &Out) const {
-  PrintReplacementLHS(Out, BPCs, PCs, Mapping.LHS);
+void CandidateReplacement::printLHS(llvm::raw_ostream &Out,
+                                    ReplacementContext &Context,
+                                    bool printNames) const {
+  PrintReplacementLHS(Out, BPCs, PCs, Mapping.LHS, Context, printNames);
 }
 
-void CandidateReplacement::print(llvm::raw_ostream &Out) const {
-  PrintReplacement(Out, BPCs, PCs, Mapping);
+void CandidateReplacement::print(llvm::raw_ostream &Out,
+                                 bool printNames) const {
+  PrintReplacement(Out, BPCs, PCs, Mapping, printNames);
 }
 
 namespace {
