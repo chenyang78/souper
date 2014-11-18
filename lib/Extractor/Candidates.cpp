@@ -571,6 +571,8 @@ std::vector<Inst *> AddPCSets(const std::vector<InstMapping> &PCs,
   return PCSets;
 }
 
+// Similar to AddPCSets, add the variable sets of BlockPCs as equivalence
+// classes to Vars. Return a BPCSets of the same size as BPCs.
 std::vector<Inst *> AddBlockPCSets(const BlockPCs &BPCs, InstClasses &Vars) {
   std::vector<Inst *> BPCSets(BPCs.size());
   for (unsigned i = 0; i != BPCs.size(); ++i) {
@@ -612,10 +614,12 @@ BlockPCs GetRelevantBPCs(const BlockPCs &BPCs,
   for (unsigned i = 0; i != BPCs.size(); ++i) {
     if (BPCSets[i] == 0)
       continue;
+    // This blockpc shares a var with the candidate.
     if (Vars.findLeader(BPCSets[i]) == Leader) {
       RelevantBPCs.emplace_back(BPCs[i]);
       continue;
     }
+    // This blockpc shares a var with a pc.
     for (auto PC : PCs) {
       Leader = AddVarSet(Vars.member_end(), Vars, SeenInsts, PC.LHS);
       if (Vars.findLeader(BPCSets[i]) == Leader) {
