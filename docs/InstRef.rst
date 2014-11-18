@@ -52,7 +52,7 @@ is how we might express this as a Souper ``Inst``:
     cand %1lx 1
 
 The second form expresses that the relation ``X = Y`` holds on the ``ith``
-incoming edge of the given block ``b``, where ``i`` is zero-based.
+incoming path of the given block ``b``, where ``i`` is zero-based.
 For example, in the C program below:
 
 .. code-block:: c
@@ -68,7 +68,7 @@ For example, in the C program below:
    }
 
 the expression ``c == 2`` can be evaluated based on the values of ``c``
-from three incoming edges. In souper, we might express this as:
+from both of the incoming paths. In souper, we might express this as:
 
 .. code-block:: text
 
