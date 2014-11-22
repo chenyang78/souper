@@ -33,6 +33,7 @@
 #include <memory>
 #include <sstream>
 #include <unordered_set>
+#include <tuple>
 
 using namespace llvm;
 using namespace klee;
@@ -584,50 +585,28 @@ std::vector<Inst *> AddBlockPCSets(const BlockPCs &BPCs, InstClasses &Vars) {
   return BPCSets;
 }
 
-// Return a vector of relevant PCs for a candidate, namely those whose variable
-// sets are in the same equivalence class as the candidate's.
-std::vector<InstMapping> GetRelevantPCs(const std::vector<InstMapping> &PCs,
-                                        const std::vector<Inst *> &PCSets,
-                                        InstClasses Vars,
-                                        InstMapping Cand) {
+// Return vectors of relevant BlockPCs and PCs for a candidate, namely those
+// whose variable sets are in the same equivalence class as the candidate's.
+std::tuple<BlockPCs, std::vector<InstMapping>> GetRelevantPCs(
+    const BlockPCs &BPCs, const std::vector<InstMapping> &PCs,
+    const std::vector<Inst *> &BPCSets, const std::vector<Inst *> &PCSets,
+    InstClasses Vars, InstMapping Cand) {
+
   llvm::DenseSet<Inst *> SeenInsts;
   auto Leader = AddVarSet(Vars.member_end(), Vars, SeenInsts, Cand.LHS);
+
+  BlockPCs RelevantBPCs;
+  for (unsigned i = 0; i != BPCs.size(); ++i) {
+    if (BPCSets[i] != 0 && Vars.findLeader(BPCSets[i]) == Leader)
+      RelevantBPCs.emplace_back(BPCs[i]);
+  }
 
   std::vector<InstMapping> RelevantPCs;
   for (unsigned i = 0; i != PCs.size(); ++i) {
     if (PCSets[i] != 0 && Vars.findLeader(PCSets[i]) == Leader)
       RelevantPCs.emplace_back(PCs[i]);
   }
-  return RelevantPCs;
-}
-
-BlockPCs GetRelevantBPCs(const BlockPCs &BPCs,
-                         const std::vector<InstMapping> &PCs,
-                         const std::vector<Inst *> &BPCSets,
-                         InstClasses Vars,
-                         InstMapping Cand) {
-  llvm::DenseSet<Inst *> SeenInsts;
-  auto Leader = AddVarSet(Vars.member_end(), Vars, SeenInsts, Cand.LHS);
-
-  BlockPCs RelevantBPCs;
-  for (unsigned i = 0; i != BPCs.size(); ++i) {
-    if (BPCSets[i] == 0)
-      continue;
-    // This blockpc shares a var with the candidate.
-    if (Vars.findLeader(BPCSets[i]) == Leader) {
-      RelevantBPCs.emplace_back(BPCs[i]);
-      continue;
-    }
-    // This blockpc shares a var with a pc.
-    for (auto PC : PCs) {
-      Leader = AddVarSet(Vars.member_end(), Vars, SeenInsts, PC.LHS);
-      if (Vars.findLeader(BPCSets[i]) == Leader) {
-        RelevantBPCs.emplace_back(BPCs[i]);
-        break;
-      }
-    }
-  }
-  return RelevantBPCs;
+  return std::make_tuple(RelevantBPCs, RelevantPCs);
 }
 
 void ExtractExprCandidates(Function &F, const LoopInfo *LI,
@@ -651,8 +630,8 @@ void ExtractExprCandidates(Function &F, const LoopInfo *LI,
       auto BPCSets = AddBlockPCSets(BCS->BPCs, BPCVars);
 
       for (auto &R : BCS->Replacements) {
-        R.PCs = GetRelevantPCs(BCS->PCs, PCSets, Vars, R.Mapping);
-        R.BPCs = GetRelevantBPCs(BCS->BPCs, R.PCs, BPCSets, BPCVars, R.Mapping);
+        std::tie(R.BPCs, R.PCs) = 
+          GetRelevantPCs(BCS->BPCs, BCS->PCs, BPCSets, PCSets, Vars, R.Mapping);
       }
 
       Result.Blocks.emplace_back(std::move(BCS));
