@@ -32,8 +32,6 @@ sub linkp() {
     return 1;
 }
 
-$souper = 0 unless compiling();
-
 if ($0 =~ /clang$/) {
     unshift @ARGV, "@LLVM_BINDIR@/clang";
 } elsif ($0 =~ /clang\+\+$/) {
@@ -57,6 +55,8 @@ if ($ENV{"SOUPER_SKIP_FILES"}) {
         $souper = 0 if ($skips{$a});
     }
 }
+
+$souper = 0 unless compiling();
 
 if ($souper) {
     push @ARGV, (
