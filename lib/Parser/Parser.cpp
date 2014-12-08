@@ -676,42 +676,27 @@ bool Parser::parseLine(std::string &ErrStr) {
                               " is undeclared");
           return false;
         }
-        std::map<Block *, unsigned>::iterator IdxIt = BlockPCIdxMap.find(B);
-        unsigned CurrIdx;
-        // Starting a new set of blockpc(s)
-        if (IdxIt == BlockPCIdxMap.end()) {
-          CurrIdx = 0;
-        }
-        else {
-          assert(BPCs.size() && "Empty BlockPCs!");
-          if (BPCs.back().B != B) {
-            // Let's make sure all blockpc(s) of a block are consecutive.
-            ErrStr = makeErrStr(std::string("blockpc(s) %") + InstName.str() +
-                                " are not consecutive");
-            return false;
-          }
-          CurrIdx = BPCs.back().PredIdx;
-        }
-
         if (!consumeToken(ErrStr)) return false;
+
         if (CurTok.K != Token::UntypedInt) {
           ErrStr = makeErrStr(std::string("expected block number"));
           return false;
         }
-        // Block numbers starts from 0 to N-1, where N is the number of
-        // incoming edges.
-        if (CurTok.Val.ult(CurrIdx)) {
-          ErrStr = makeErrStr(std::string("expected block number: ") +
-                              "greater than or equal to " +
-                              std::to_string(CurrIdx));
-          return false;
-        }
-        CurrIdx = CurTok.Val.getLimitedValue();
+        unsigned CurrIdx = CurTok.Val.getLimitedValue();
         if (!consumeToken(ErrStr)) return false;
 
         InstMapping PC = parseInstMapping(ErrStr);
         if (!ErrStr.empty()) return false;
-        BlockPCIdxMap[B] = CurrIdx;
+
+        std::map<Block *, unsigned>::iterator IdxIt = BlockPCIdxMap.find(B);
+        if (IdxIt == BlockPCIdxMap.end()) {
+          BlockPCIdxMap[B] = CurrIdx;
+        }
+        else {
+          assert(BPCs.size() && "Empty BlockPCs!");
+          if (CurrIdx > IdxIt->second)
+            BlockPCIdxMap[B] = CurrIdx;
+        }
         BPCs.emplace_back(B, CurrIdx, PC);
 
         return true;
