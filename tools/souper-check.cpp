@@ -85,7 +85,6 @@ int SolveInst(const MemoryBufferRef &MB, Solver *S) {
                             Rep.Mapping.LHS, Context);
         PrintReplacementRHS(llvm::outs(), Rep.Mapping.RHS, Context);
       } else {
-        ReplacementContext Context;
         PrintReplacementRHS(llvm::outs(), Rep.Mapping.RHS, Context);
       }
     } else {
