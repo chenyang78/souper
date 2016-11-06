@@ -967,7 +967,8 @@ ref<Expr> ExprBuilder::getBlockPCs() {
   ref<Expr> Result = klee::ConstantExpr::create(1, Expr::Bool);
   // For each Phi instruction
   for (const auto &I : UBPathInsts) {
-    assert((CachedPhis.count(I) == 0) && "We cannot revisit a cached Phi");
+    if (CachedPhis.count(I) != 0)
+      continue;
     // Recursively collect BlockPCs
     std::vector<std::unique_ptr<BlockPCPhiPath>> BlockPCPhiPaths;
     BlockPCPhiPath *Current = new BlockPCPhiPath;
@@ -1012,10 +1013,12 @@ void ExprBuilder::getBlockPCPhiPaths(
   if (CachedPhis.count(I))
     return;
   Current->Phis.push_back(I);
-  // Based on the dependency chain, looks like we would never
-  // encounter this case.
-  assert(!Current->BlockConstraints.count(I->B) && 
-         "Basic block has been added into BlockConstraints!");
+
+  // Since we treat a select instruction as a phi instruction, it's
+  // possible that I->B has been added already.
+  if (Current->BlockConstraints.count(I->B))
+    return;
+
   std::vector<BlockPCPhiPath *> Tmp = { Current };
   // Create copies of the current path
   for (unsigned J = 1; J < Ops.size(); ++J) {
