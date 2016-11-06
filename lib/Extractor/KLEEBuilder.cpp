@@ -88,6 +88,8 @@ struct ExprBuilder {
   UniqueNameSet ArrayNames;
   // Holding the precondition, i.e. blockpc, for the UBInst under process.
   ref<Expr> UBInstPrecondition;
+  // Indicate if the UBInst relates to BlockPC
+  bool IsForBlockPCUBInst;
 
   ref<Expr> makeSizedArrayRead(unsigned Width, StringRef Name, Inst *Origin);
   ref<Expr> addnswUB(Inst *I);
@@ -345,10 +347,17 @@ ref<Expr> ExprBuilder::countOnes(ref<Expr> L) {
 }
 
 void ExprBuilder::recordUBInstruction(Inst *I, ref<Expr> E) {
-  if (UBInstPrecondition.isNull())
+  if (!IsForBlockPCUBInst) {
     UBExprMap[I] = E;
-  else
+  }
+  else if (!UBInstPrecondition.isNull()) {
+    // The current UBInst comes from BlockPC. It's possible
+    // that the precondition is missing at this point (e.g.,
+    // the corresponding Phi is not part of the current
+    // Souper IR because the Phi is not in the equivalence class
+    // of the instruction.
     UBExprMap[I] = Expr::createImplies(UBInstPrecondition, E);
+  }
 }
 
 ref<Expr> ExprBuilder::build(Inst *I) {
@@ -930,11 +939,13 @@ void ExprBuilder::setBlockPCMap(const BlockPCs &BPCs) {
     //   (1) UBInstExpr collected through blockpc, and;
     //   (2) UBInstExpr collected through pc/lhs/rhs
     // For the first case, UBInst(s) is conditional, i.e.,
-    // they are dependent on the fact that blockpc(s) are true.
+    // they rely on the fact that blockpc(s) are true.
     if (I != PCMap.end()) {
       UBInstPrecondition = I->second;
     }
+    IsForBlockPCUBInst = true;
     ref<Expr> PE = getInstMapping(BPC.PC);
+    IsForBlockPCUBInst = false;
     UBInstPrecondition = nullptr;
     if (I == PCMap.end()) {
       PCMap[BPC.PredIdx] = PE;
