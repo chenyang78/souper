@@ -71,7 +71,7 @@ struct BlockPCPhiPath {
 struct ExprBuilder {
   ExprBuilder(std::vector<std::unique_ptr<Array>> &Arrays,
               std::vector<Inst *> &ArrayVars)
-      : Arrays(Arrays), ArrayVars(ArrayVars) {}
+      : Arrays(Arrays), ArrayVars(ArrayVars), IsForBlockPCUBInst(false) {}
 
   std::map<Block *, std::vector<ref<Expr>>> BlockPredMap;
   std::map<Inst *, ref<Expr>> ExprMap;
@@ -813,7 +813,12 @@ ref<Expr> ExprBuilder::getUBInstCondition() {
       // Aggregate collected UB constraints
       ref<Expr> Ante = klee::ConstantExpr::alloc(1, 1);
       for (const auto &I : Path->UBInsts) {
-        Ante = AndExpr::create(Ante, UBExprMap[I]);
+        auto Iter = UBExprMap.find(I);
+        // It's possible that the instruction I is not in the map.
+        // For example, it may come from a blockpc which doesn't
+        // have any preconditions.
+        if (Iter != UBExprMap.end())
+          Ante = AndExpr::create(Ante, Iter->second);
         UsedUBInsts.insert(I);
       }
       // Create path predicate
