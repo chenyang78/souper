@@ -553,6 +553,8 @@ Block *InstContext::createBlock(unsigned Preds) {
 
   B->Number = Number;
   B->Preds = Preds;
+  for (unsigned J = 0; J < Preds-1; ++J)
+    B->PredVars.push_back(createVar(1, "blockpred"));
   return B;
 }
 
@@ -579,7 +581,8 @@ Inst *InstContext::getPhi(Block *B, const std::vector<Inst *> &Ops) {
 }
 
 Inst *InstContext::getInst(Inst::Kind K, unsigned Width,
-                           const std::vector<Inst *> &Ops) {
+                           const std::vector<Inst *> &Ops,
+                           bool Available) {
   std::vector<Inst *> OrderedOps;
 
   const std::vector<Inst *> *InstOps;
@@ -607,6 +610,7 @@ Inst *InstContext::getInst(Inst::Kind K, unsigned Width,
   N->Width = Width;
   N->Ops = *InstOps;
   N->DemandedBits = llvm::APInt::getAllOnesValue(Width);
+  N->Available = Available;
   InstSet.InsertNode(N, IP);
   return N;
 }
@@ -646,6 +650,20 @@ int Inst::getCost(Inst::Kind K) {
     default:
       return 1;
   }
+}
+
+static int costHelper(Inst *I, std::set<Inst *> &Visited) {
+  if (!Visited.insert(I).second)
+    return 0;
+  int Cost = Inst::getCost(I->K);
+  for (auto Op : I->Ops)
+    Cost += costHelper(Op, Visited);
+  return Cost;
+}
+
+int souper::cost(Inst *I) {
+  std::set<Inst *> Visited;
+  return costHelper(I, Visited);
 }
 
 void souper::PrintReplacement(llvm::raw_ostream &Out,

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DemandedBits.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "souper/Inst/Inst.h"
 #include <map>
@@ -111,11 +112,12 @@ struct BlockInfo {
 struct ExprBuilderContext {
   std::map<const llvm::Value *, Inst *> InstMap;
   std::map<llvm::BasicBlock *, BlockInfo> BlockMap;
+  std::multimap<Inst *, llvm::Value *> Origins;
 };
 
 FunctionCandidateSet ExtractCandidatesFromPass(
     llvm::Function *F, const llvm::LoopInfo *LI, llvm::DemandedBits *DB,
-    InstContext &IC, ExprBuilderContext &EBC,
+    llvm::TargetLibraryInfo *TLI, InstContext &IC, ExprBuilderContext &EBC,
     const ExprBuilderOptions &Opts = ExprBuilderOptions());
 
 FunctionCandidateSet ExtractCandidates(
